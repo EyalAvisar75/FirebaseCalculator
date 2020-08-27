@@ -29,18 +29,76 @@ class LoginController: UIViewController {
     }
     
     @IBAction func tappedLogin(_ sender: Any) {
-        let calculatorVC = storyboard?.instantiateViewController(identifier: "CalculatorVC")
-        present(calculatorVC!, animated: true)
+        guard userNameTextField.text != "" else {
+            print("Please enter a user name")
+            return
+        }
+        
+        user.userName = userNameTextField.text!
+        var userExists = true
+        
+        let  requestListenRefo = self.ref!.child("users/\(self.user.userName)")
+
+            requestListenRefo.observe(DataEventType.value, with: { (snapshot) in
+
+               let value = snapshot.value as? String
+
+                if(value == nil)
+                {
+                    userExists = false
+                }
+
+             })
+        if !userExists {
+            print("user name does not exist")
+            return
+        }
+        else {
+            let calculatorVC = storyboard?.instantiateViewController(identifier: "CalculatorVC") as! CalculatorController
+            
+            setExerciseFromDatabase()
+            calculatorVC.user = user
+            present(calculatorVC, animated: true)
+        }
     }
     
     @IBAction func tappedCreateUser(_ sender: Any) {
-        if userNameTextField.text != "" {
-            user.userName = userNameTextField.text!
+        guard newUserTextField.text != "" else {
+            print("Please enter a user name")
+            return
         }
         
-        ref?.child("userName").setValue(user.userName)
-        let calculatorVC = storyboard?.instantiateViewController(identifier: "CalculatorVC")
-        present(calculatorVC!, animated: true)
+        user.userName = newUserTextField.text!
+        var userExists = false
+        
+        ref?.observeSingleEvent(of: .value, with: { snapshot in
+
+                guard let dict = snapshot.value as? [String:[String:Any]] else {
+                    print("No info")
+                    return
+                }
+                Array(dict.values).forEach {
+                    let currentUser = $0["userName"] as? String
+                    if currentUser == self.user.userName {
+                        print("user name already exists")
+                        userExists = true
+                        self.newUserTextField.text = ""
+                        return
+                    }
+                }
+        })
+        if userExists {
+            return
+        }
+        else {
+            self.ref!.child("users").child(user.userName).setValue(["userName": user.userName])
+            
+            let calculatorVC = storyboard?.instantiateViewController(identifier: "CalculatorVC") as! CalculatorController
+            
+            calculatorVC.user = user
+            present(calculatorVC, animated: true)
+        }
+        
     }
     
     @IBAction func tappedAnoynmousUser(_ sender: Any) {
@@ -52,7 +110,7 @@ class LoginController: UIViewController {
         var component = ""
         
         for key in user.exercise.variables {
-            databaseHandle = ref?.child(key).observe(.value, with: { (snapshot) in
+            databaseHandle = ref?.child("users").child(key).observe(.value, with: { (snapshot) in
                 switch key {
                 case "exerciseNumbers":
                     component = snapshot.value as! String

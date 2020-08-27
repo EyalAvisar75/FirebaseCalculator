@@ -4,7 +4,9 @@
 //
 //  Created by eyal avisar on 21/08/2020.
 //  Copyright © 2020 eyal avisar. All rights reserved.
-//
+//git remote add origin https:
+//github.com/EyalAvisar75/FirebaseCalculator.git
+//git push -u origin master
 
 import UIKit
 import FirebaseDatabase
@@ -91,12 +93,17 @@ class CalculatorController: UIViewController {
         }
         //TODO: write to firebase
         if user != nil {
-            <#code#>
+//            self.ref.child("users").child(user.uid).setValue(["username": username])
+            ref?.child("users").child(user!.userName).child("exerciseIsDot").setValue(exercise.isDot)
+            ref?.child("users").child(user!.userName).child("exerciseIsOperation").setValue(exercise.isOperation)
+            ref?.child("users").child(user!.userName).child("exerciseNumbers").setValue(exercise.numbers)
+            ref?.child("users").child(user!.userName).child("exerciseOperations").setValue(exercise.operations)
+            
+            ref?.child("users").child("exerciseIsOperation").setValue(exercise.isOperation)
+            ref?.child("users").child("exerciseNumbers").setValue(exercise.numbers.description)
+            ref?.child("users").child("exerciseOperations").setValue(exercise.operations.description)
         }
-        ref?.child("exerciseIsDot").setValue(exercise.isDot)
-        ref?.child("exerciseIsOperation").setValue(exercise.isOperation)
-        ref?.child("exerciseNumbers").setValue(exercise.numbers.description)
-        ref?.child("exerciseOperations").setValue(exercise.operations.description)
+        
 
         resultLabel.text = exercise.numbers.last
         
