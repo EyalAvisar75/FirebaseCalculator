@@ -38,6 +38,7 @@ class CalculatorController: UIViewController {
             return
         }
         
+        //The following lines allow to enter terms and operands successively
         if exercise.isOperation {
             resultLabel.text = ""
         }
@@ -85,12 +86,20 @@ class CalculatorController: UIViewController {
     
     func calculate() {
         print("before: \(exercise)")
+        if exercise.operations[0] == "="{
+            exercise.operations.remove(at: 0)
+            exercise.numbers.remove(at: 0)
+        }
         if exercise.numbers.count >= 2 {
             divideOrMultiply()
         }
         if exercise.numbers.count > 2 {
             addOrSubtract()
         }
+        if exercise.numbers.count == 2 && exercise.operations.contains("="){
+            addOrSubtract()
+        }
+        
         //write to firebase
         if user != nil {
             ref?.child("users").child(user!.userName).child("description").setValue(exercise.description)
@@ -110,8 +119,12 @@ class CalculatorController: UIViewController {
         if exercise.operations[0] == "+" {
             result = Double(exercise.numbers[0])! + Double(exercise.numbers[1])!
         }
-        else {
+        else if exercise.operations[0] == "-" {
             result = Double(exercise.numbers[0])! - Double(exercise.numbers[1])!
+        }
+        
+        if result == nil {
+            return
         }
         
         exercise.numbers.remove(at: 0)
