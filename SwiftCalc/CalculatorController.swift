@@ -152,13 +152,10 @@ class CalculatorController: UIViewController {
         }
         
         let elements = exerciseDescription.components(separatedBy:",")
-        print("elements \(elements), \(elements.count)")
         exercise.isDot = Bool(elements[0])!
         exercise.isOperation = Bool(elements[1])!
         exercise.operations = elements[2].replacingOccurrences(of: "[", with: "").replacingOccurrences(of: "]", with: "").components(separatedBy: " ")
-        print("ops \(exercise.operations.count)")
         exercise.numbers = elements[3].replacingOccurrences(of: "[", with: "").replacingOccurrences(of: "]", with: "").components(separatedBy: " ")
-        print("nums \(exercise.numbers.count)")
 
         var index = 0
 
