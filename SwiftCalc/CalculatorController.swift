@@ -67,11 +67,23 @@ class CalculatorController: UIViewController {
     func touchedOperation(sender:UIButton) {
         if !exercise.isOperation {
             exercise.numbers += [resultLabel.text!]
-            exercise.operations.append((sender.titleLabel?.text)!)
+            if sender.titleLabel!.text == "%" {
+                exercise.operations.append("/")
+                exercise.numbers.append("100")
+            }
+            else {
+                exercise.operations.append((sender.titleLabel?.text)!)
+            }
         }
         else {
             exercise.operations.popLast()
-            exercise.operations.append((sender.titleLabel?.text)!)
+            if sender.titleLabel!.text == "%" {
+                exercise.operations.append("/")
+                exercise.numbers.append("100")
+            }
+            else {
+                exercise.operations.append((sender.titleLabel?.text)!)
+            }
         }
         exercise.isOperation = true
         calculateExpression()
