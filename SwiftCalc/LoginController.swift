@@ -47,6 +47,9 @@ class LoginController: UIViewController {
                 {
                     userExists = false
                 }
+                else {
+                    print(snapshot)
+                }
 
              })
         if !userExists {
@@ -54,11 +57,9 @@ class LoginController: UIViewController {
             return
         }
         else {
-            let calculatorVC = storyboard?.instantiateViewController(identifier: "CalculatorVC") as! CalculatorController
+            setExerciseFromDatabase()//async func problem - next screen has'nt the data when asked to print
             
-            setExerciseFromDatabase()
-            calculatorVC.user = user
-            present(calculatorVC, animated: true)
+
         }
     }
     
@@ -107,46 +108,63 @@ class LoginController: UIViewController {
     }
     
     func setExerciseFromDatabase() {
-        var component = ""
         
-        for key in user.exercise.variables {
-            databaseHandle = ref?.child("users").child(key).observe(.value, with: { (snapshot) in
-                switch key {
-                case "exerciseNumbers":
-                    component = snapshot.value as! String
-                    let components = component.components(separatedBy: [",", "\""])
-                    for item in components {
-                        self.user.exercise.numbers += [item]
-                    }
-                    var index = 0
-                    while index < self.user.exercise.numbers.count {
-                        if Double(self.user.exercise.numbers[index]) == nil {
-                            self.user.exercise.numbers.remove(at: index)
-                            index -= 1
-                        }
-                        index += 1
-                    }
-
-                case "exerciseIsOperations":
-                    self.user.exercise.isOperation = snapshot.value as? Bool ?? false
-                case "exerciseIsDot":
-                    self.user.exercise.isDot = snapshot.value as? Bool ?? false
-                case "exerciseOperations":
-                    component = snapshot.value as! String
-                    let components = component.components(separatedBy: [",", "\""])
-                    for item in components {
-                        if ["+", "-", "X", "/", "X=", "/=", "+=", "-="].contains(item) {
-                            self.user.exercise.operations += [item]
-                        }
-                    }
-                default:
-                    print("retrieval failed")
-                }
-                
-                print("component: \(component)")
-                print("numbers: \(self.user.exercise.numbers) \(self.user.exercise.operations) dot \(self.user.exercise.isDot) isop \(self.user.exercise.isOperation)")
-            })
-
-        }
+        ref?.child("users").child(user.userName).observeSingleEvent(of: .value, with: { (snapshot) in
+            
+            let values = snapshot.value as? [String:Any]
+            if let exerciseDescription = values?["description"] {
+                let ed = exerciseDescription as! String
+                self.loginCalculator(exerciseDescription: ed)
+            }
+//            var counter = 0
+            
+//            for (key, val) in values! {
+//                switch key {
+//                case "exerciseNumbers":
+//                    let array = val as! NSArray as! [String]
+//                    self.user.exercise.numbers = array
+//                    print("self \(self.user.exercise.numbers)")
+//                    counter += 1
+//                    print(counter)
+//                    if counter == 3 {
+//                        self.loginCalculator()
+//                    }
+//                case "exerciseIsOperations":
+//                    self.user.exercise.isOperation = val as? Bool ?? false
+//                    counter += 1
+//                    print(counter)
+//                    if counter == 3 {
+//                        self.loginCalculator()
+//                    }
+//                case "exerciseIsDot":
+//                    self.user.exercise.isDot = val as? Bool ?? false
+//                    counter += 1
+//                    print(counter)
+//                    if counter == 3 {
+//                        self.loginCalculator()
+//                    }
+//                case "exerciseOperations":
+//                    var array = val as! NSArray as! [String]
+//                    self.user.exercise.operations = array
+//                    print("self \(self.user.exercise.operations)")
+//                    counter += 1
+//                    print(counter)
+//                    if counter == 3 {
+//                        self.loginCalculator()
+//                    }
+//                default:
+//                    print("retrieval failed")
+//                }
+//            }
+        })
+    }
+    
+    func loginCalculator(exerciseDescription:String) {
+        let calculatorVC = storyboard?.instantiateViewController(identifier: "CalculatorVC") as! CalculatorController
+        
+        calculatorVC.user = self.user
+        calculatorVC.exerciseDescription = exerciseDescription
+        present(calculatorVC, animated: true)
     }
 }
+

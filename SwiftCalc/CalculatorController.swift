@@ -19,18 +19,20 @@ class CalculatorController: UIViewController {
     var databaseHandle:DatabaseHandle?
     var exercise = Exercise()
     var user:User?
+    var exerciseDescription = ""
+    
     
     override func viewDidLoad() {
         super.viewDidLoad()
 
         ref = Database.database().reference()
         if user != nil {
-            exercise = user!.exercise
+            print("received : \(exerciseDescription)")
+            loadExercise()
         }
     }
     
     @IBAction func touchedKey(sender:UIButton){
-        
         if Int((sender.titleLabel?.text)!) == nil {
             touchedNoneNumber(sender: sender)
             return
@@ -72,8 +74,7 @@ class CalculatorController: UIViewController {
         }
         exercise.isOperation = true
         calculateExpression()
-//        print(exercise.numbers)
-//        print(exercise.operations)
+        print(exercise)
     }
     
     func calculateExpression() {
@@ -83,25 +84,19 @@ class CalculatorController: UIViewController {
     }
     
     func calculate() {
-        print("numbers before: \(exercise.numbers)")
-        print("operations before: \(exercise.operations)")
-
+        print("before: \(exercise)")
         if exercise.numbers.count >= 2 {
             divideOrMultiply()
         }
         if exercise.numbers.count > 2 {
             addOrSubtract()
         }
-        //TODO: write to firebase
+        //write to firebase
         if user != nil {
-            ref?.child("users").child(user!.userName).child("exerciseIsDot").setValue(exercise.isDot)
-            ref?.child("users").child(user!.userName).child("exerciseIsOperation").setValue(exercise.isOperation)
-            ref?.child("users").child(user!.userName).child("exerciseNumbers").setValue(exercise.numbers)
-            ref?.child("users").child(user!.userName).child("exerciseOperations").setValue(exercise.operations)
+            ref?.child("users").child(user!.userName).child("description").setValue(exercise.description)
         }
         
-        print("numbers: \(exercise.numbers)")
-        print("operations: \(exercise.operations)")
+        print("exercise: \(exercise)")
         resultLabel.text = exercise.numbers.last
         
     }
@@ -150,4 +145,48 @@ class CalculatorController: UIViewController {
         exercise.operations.remove(at: index)
     }
     
+    func loadExercise() {
+        
+        if exerciseDescription == "" {
+            return
+        }
+        
+        let elements = exerciseDescription.components(separatedBy:",")
+        print("elements \(elements), \(elements.count)")
+        exercise.isDot = Bool(elements[0])!
+        exercise.isOperation = Bool(elements[1])!
+        exercise.operations = elements[2].replacingOccurrences(of: "[", with: "").replacingOccurrences(of: "]", with: "").components(separatedBy: " ")
+        print("ops \(exercise.operations.count)")
+        exercise.numbers = elements[3].replacingOccurrences(of: "[", with: "").replacingOccurrences(of: "]", with: "").components(separatedBy: " ")
+        print("nums \(exercise.numbers.count)")
+
+        var index = 0
+
+        while index < exercise.operations.count {
+            if exercise.operations[index].count == 0 {
+                exercise.operations.remove(at: index)
+            }
+            else {
+                exercise.operations[index] = exercise.operations[index].replacingOccurrences(of: "\"", with: "").replacingOccurrences(of: "\\", with: "")
+                
+                if exercise.operations[index] == "" {
+                    exercise.operations[index] = "\\"
+                }
+                index += 1
+            }
+        }
+        
+        index = 0
+        
+        while index < exercise.numbers.count {
+            if exercise.numbers[index].count == 0 {
+                exercise.numbers.remove(at: index)
+            }
+            else {
+                exercise.numbers[index] = exercise.numbers[index].replacingOccurrences(of: "\"", with: "").replacingOccurrences(of: "\\", with: "")
+                
+                index += 1
+            }
+        }        
+    }
 }
