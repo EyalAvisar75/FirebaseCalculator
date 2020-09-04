@@ -14,6 +14,7 @@ import FirebaseDatabase
 class CalculatorController: UIViewController {
 
     @IBOutlet weak var resultLabel: UILabel!
+    @IBOutlet weak var ACButton: UIButton!
     
     var ref:DatabaseReference?
     var databaseHandle:DatabaseHandle?
@@ -32,12 +33,29 @@ class CalculatorController: UIViewController {
         }
     }
     
-    @IBAction func touchedKey(sender:UIButton){
-        if Int((sender.titleLabel?.text)!) == nil {
-            touchedNoneNumber(sender: sender)
+    @IBAction func tappedKey(sender:UIButton){
+        if tappedAC(sender: sender) {
+            if resultLabel.text == "C" {
+                if exercise.isOperation {
+                    resultLabel.text = exercise.numbers.last
+                }
+                else {
+                    resultLabel.text = "0"
+                }
+            }
+            else {
+                resultLabel.text = "0"
+            }
             return
         }
         
+        if Int((sender.titleLabel?.text)!) == nil {
+            tappedNoneNumber(sender: sender)
+            return
+        }
+        
+        ACButton.setTitle("C", for: .normal)
+
         //The following lines allow to enter terms and operands successively
         if exercise.isOperation {
             resultLabel.text = ""
@@ -51,8 +69,10 @@ class CalculatorController: UIViewController {
         
     }
     
-    func touchedNoneNumber(sender:UIButton) {
+    func tappedNoneNumber(sender:UIButton) {
         if sender.titleLabel?.text == "." {
+            ACButton.setTitle("C", for: .normal)
+
             if exercise.isDot {
                 return
             }
@@ -61,27 +81,21 @@ class CalculatorController: UIViewController {
             return
         }
         exercise.isDot = false
-        touchedOperation(sender: sender)
+        tappedOperation(sender: sender)
     }
     
-    func touchedOperation(sender:UIButton) {
+    func tappedOperation(sender:UIButton) {
         if !exercise.isOperation {
             exercise.numbers += [resultLabel.text!]
-            if sender.titleLabel!.text == "%" {
-                exercise.operations.append("/")
-                exercise.numbers.append("100")
-            }
-            else {
+
+            if !tappedSpecialKey(sender: sender) {
                 exercise.operations.append((sender.titleLabel?.text)!)
             }
         }
         else {
             exercise.operations.popLast()
-            if sender.titleLabel!.text == "%" {
-                exercise.operations.append("/")
-                exercise.numbers.append("100")
-            }
-            else {
+
+            if !tappedSpecialKey(sender: sender) {
                 exercise.operations.append((sender.titleLabel?.text)!)
             }
         }
@@ -90,8 +104,48 @@ class CalculatorController: UIViewController {
         print(exercise)
     }
     
+    func tappedAC(sender:UIButton)->Bool {
+        guard sender.titleLabel!.text == "AC" || sender.titleLabel!.text == "C" else {
+            return false
+        }
+        
+        if sender.titleLabel!.text == "AC" {
+            exercise.description = ""
+            exercise.numbers = []
+            exercise.operations = []
+            exercise.isDot = false
+            exercise.isOperation = false
+        }
+        else {
+            resultLabel.text = "C"
+            sender.setTitle("AC", for: .normal)
+            if exercise.isOperation {
+                //i should probably create pressedC for the next action
+                exercise.operations.popLast()
+            }
+            else {
+                exercise.numbers.popLast()
+            }
+        }
+        
+        return true
+    }
+
+    func tappedSpecialKey(sender:UIButton)->Bool {
+        if sender.titleLabel!.text == "%" {
+            exercise.operations.append("/")
+            exercise.numbers.append("100")
+            return true
+        }
+        if sender.titleLabel!.text == "+/-" {
+            exercise.operations.append("X")
+            exercise.numbers.append("-1")
+            return true
+        }
+        return false
+    }
     func calculateExpression() {
-        if exercise.numbers.count > 1 {
+        if exercise.numbers.count >= 1 {
             calculate()
         }
     }
@@ -100,7 +154,9 @@ class CalculatorController: UIViewController {
         print("before: \(exercise)")
         if exercise.operations[0] == "="{
             exercise.operations.remove(at: 0)
-            exercise.numbers.remove(at: 0)
+            if exercise.numbers[0] == "0" {
+                exercise.numbers.remove(at: 0)
+            }
         }
         if exercise.numbers.count >= 2 {
             divideOrMultiply()
@@ -118,8 +174,12 @@ class CalculatorController: UIViewController {
         }
         
         print("exercise: \(exercise)")
-        resultLabel.text = exercise.numbers.last
-        
+        if exercise.numbers.count > 0 {
+            resultLabel.text = exercise.numbers.last
+        }
+        else {
+            resultLabel.text = "0"
+        }
     }
     
     func addOrSubtract() {
