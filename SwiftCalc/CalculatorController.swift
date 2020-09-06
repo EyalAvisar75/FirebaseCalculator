@@ -7,6 +7,7 @@
 //git remote add origin https:
 //github.com/EyalAvisar75/FirebaseCalculator.git
 //git push -u origin master
+// known problem 5+6%/ gives 5/0.06
 
 import UIKit
 import FirebaseDatabase
@@ -21,7 +22,7 @@ class CalculatorController: UIViewController {
     var exercise = Exercise()
     var user:User?
     var exerciseDescription = ""
-    
+    var pressedC = false
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -38,14 +39,17 @@ class CalculatorController: UIViewController {
             if resultLabel.text == "C" {
                 if exercise.isOperation {
                     resultLabel.text = exercise.numbers.last
+                    exercise.numbers.popLast()
+                    pressedC = true
                 }
                 else {
                     resultLabel.text = "0"
                 }
             }
-            else {
-                resultLabel.text = "0"
-            }
+            
+            return
+        }
+        if exercise.numbers.contains("Not A Number") {
             return
         }
         
@@ -87,9 +91,14 @@ class CalculatorController: UIViewController {
     func tappedOperation(sender:UIButton) {
         if !exercise.isOperation {
             exercise.numbers += [resultLabel.text!]
-
             if !tappedSpecialKey(sender: sender) {
+                if pressedC {
+                    pressedC.toggle()
+                }
                 exercise.operations.append((sender.titleLabel?.text)!)
+            }
+            else {
+                return
             }
         }
         else {
@@ -97,8 +106,18 @@ class CalculatorController: UIViewController {
 
             if !tappedSpecialKey(sender: sender) {
                 exercise.operations.append((sender.titleLabel?.text)!)
+                if pressedC {
+                    if exercise.operations.count > exercise.numbers.count {
+                        exercise.numbers.append(resultLabel.text!)
+                    }
+                    pressedC.toggle()
+                }
+            }
+            else {
+                return
             }
         }
+        
         exercise.isOperation = true
         calculateExpression()
         print(exercise)
@@ -115,12 +134,12 @@ class CalculatorController: UIViewController {
             exercise.operations = []
             exercise.isDot = false
             exercise.isOperation = false
+            resultLabel.text = "0"
         }
         else {
             resultLabel.text = "C"
             sender.setTitle("AC", for: .normal)
             if exercise.isOperation {
-                //i should probably create pressedC for the next action
                 exercise.operations.popLast()
             }
             else {
@@ -128,22 +147,37 @@ class CalculatorController: UIViewController {
             }
         }
         
+        writeToFirebase()
         return true
     }
 
     func tappedSpecialKey(sender:UIButton)->Bool {
-        if sender.titleLabel!.text == "%" {
-            exercise.operations.append("/")
-            exercise.numbers.append("100")
-            return true
+        guard sender.titleLabel?.text == "%" || sender.titleLabel?.text == "+/-" else {
+            return false
         }
-        if sender.titleLabel!.text == "+/-" {
-            exercise.operations.append("X")
-            exercise.numbers.append("-1")
-            return true
+        
+        if exercise.numbers.count > 0 {
+            let lastNumber = exercise.numbers.last!
+            var result:Double = 0
+            if sender.titleLabel!.text == "%" {
+                result = Double(lastNumber)! / 100
+            }
+            else if sender.titleLabel!.text == "+/-" {
+                result = Double(lastNumber)! * -1
+            }
+            exercise.numbers.popLast()
+            exercise.isOperation = true
+
+            if result == 0.0 {//avoid -0
+                resultLabel.text = "0"
+            }
+            else {
+                resultLabel.text = String(result)
+            }
         }
-        return false
+        return true
     }
+    
     func calculateExpression() {
         if exercise.numbers.count >= 1 {
             calculate()
@@ -161,17 +195,24 @@ class CalculatorController: UIViewController {
         if exercise.numbers.count >= 2 {
             divideOrMultiply()
         }
-        if exercise.numbers.count > 2 {
+//        if exercise.numbers.count > 2 {
+        while exercise.operations.count >= 2 {
             addOrSubtract()
+            if exercise.operations.contains("X") ||
+               exercise.operations.contains("/")
+                {
+                break
+            }
         }
         if exercise.numbers.count == 2 && exercise.operations.contains("="){
             addOrSubtract()
         }
         
         //write to firebase
-        if user != nil {
-            ref?.child("users").child(user!.userName).child("description").setValue(exercise.description)
-        }
+//        if user != nil {
+//            ref?.child("users").child(user!.userName).child("description").setValue(exercise.description)
+//        }
+        writeToFirebase()
         
         print("exercise: \(exercise)")
         if exercise.numbers.count > 0 {
@@ -185,7 +226,9 @@ class CalculatorController: UIViewController {
     func addOrSubtract() {
         var result:Double?
         if exercise.operations[1] == "X" || exercise.operations[1] == "/" {
-            divideOrMultiply(index: 1)
+            if exercise.numbers.count >= 3 {
+                divideOrMultiply(index: 1)
+            }
             return
         }
         if exercise.operations[0] == "+" {
@@ -202,6 +245,7 @@ class CalculatorController: UIViewController {
         exercise.numbers.remove(at: 0)
         exercise.numbers[0] = "\(result!)"
         exercise.operations.remove(at: 0)
+        resultLabel.text = exercise.numbers.last
     }
     
     func divideOrMultiply(index:Int=0) {
@@ -227,7 +271,14 @@ class CalculatorController: UIViewController {
         else {
             exercise.numbers = ["Not A Number"]
         }
+        resultLabel.text = exercise.numbers.last
         exercise.operations.remove(at: index)
+    }
+    
+    func writeToFirebase() {
+        if user != nil {
+            ref?.child("users").child(user!.userName).child("description").setValue(exercise.description)
+        }
     }
     
     func loadExercise() {
@@ -269,6 +320,9 @@ class CalculatorController: UIViewController {
                 
                 index += 1
             }
-        }        
+        }
+        if exercise.numbers.count > 0 {
+            resultLabel.text = exercise.numbers.last
+        }
     }
 }
